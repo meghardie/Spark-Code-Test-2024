@@ -1,28 +1,48 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import './App.css';
 import Todo, { TodoType } from './Todo';
 
 function App() {
   const [todos, setTodos] = useState<TodoType[]>([]);
+  const [formData, setFormData] = useState<TodoType>({title: '', description: ''});
+
+  const fetchTodos = async () => {
+    try {
+      const todos = await axios.get('http://localhost:8080/');
+      if (todos.status !== 200) {
+        console.log('Error fetching data');
+        return;
+      }
+      else{
+        setTodos(todos.data);
+      }
+    } catch (e) {
+      console.log('Could not connect to server. Ensure it is running. ' + e);
+    }
+  }
 
   // Initially fetch todo
   useEffect(() => {
-    const fetchTodos = async () => {
-      try {
-        const todos = await fetch('http://localhost:8080/');
-        if (todos.status !== 200) {
-          console.log('Error fetching data');
-          return;
-        }
-
-        setTodos(await todos.json());
-      } catch (e) {
-        console.log('Could not connect to server. Ensure it is running. ' + e);
-      }
-    }
-
     fetchTodos()
   }, []);
+
+  const handleSubmit = async(e: React.FormEvent) =>{
+    e.preventDefault();
+    try{
+      let response = await axios.post("http://localhost:8080/", formData)
+      console.log("Item added successfully")
+      // Update list after adding new item
+      fetchTodos()
+    }
+    catch (error){
+      console.log("Error adding item")
+    }
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({...formData, [e.currentTarget.name]: e.currentTarget.value})
+  }
 
   return (
     <div className="app">
@@ -31,7 +51,7 @@ function App() {
       </header>
 
       <div className="todo-list">
-        {todos.map((todo) =>
+        {todos?.map((todo) =>
           <Todo
             key={todo.title + todo.description}
             title={todo.title}
@@ -41,9 +61,9 @@ function App() {
       </div>
 
       <h2>Add a Todo</h2>
-      <form>
-        <input placeholder="Title" name="title" autoFocus={true} />
-        <input placeholder="Description" name="description" />
+      <form onSubmit={handleSubmit}>
+        <input placeholder="Title" name="title" autoFocus={true} onChange={handleChange}/>
+        <input placeholder="Description" name="description" onChange={handleChange}/>
         <button>Add Todo</button>
       </form>
     </div>
